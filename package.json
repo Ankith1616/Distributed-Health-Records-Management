@@ -1,0 +1,17 @@
+{
+    "name": "healthcare",
+    "version": "1.0.0",
+    "description": "Healthcare Case Study",
+    "main": "server.js",
+    "scripts": {
+        "start": "node src/server.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^5.2.1",
+        "socket.io": "^4.8.3"
+    },
+    "type": "commonjs"
+}
