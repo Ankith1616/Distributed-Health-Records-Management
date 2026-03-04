@@ -39,8 +39,8 @@ func main() {
 
 	// Peer nodes for client coordination (only clients participate in RA)
 	clientNodes := map[int]string{
-		0: "localhost:9000",
-		1: "localhost:9001",
+		0: "10.38.21.222:9000",
+		1: "10.38.21.68:9001",
 	}
 
 	ra := &algorithms.RicartAgrawala{
