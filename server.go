@@ -15,7 +15,6 @@ import (
 type Server struct {
 	ID       int
 	Nodes    map[int]string
-	RA       *algorithms.RicartAgrawala
 	Bully    *algorithms.Bully
 	Raft     *algorithms.Raft
 	Database map[int]models.Patient
@@ -29,17 +28,6 @@ func (s *Server) LogInfo(format string, v ...interface{}) {
 // HMS is the RPC object registered for client and inter-node communication
 type HMS struct {
 	server *Server
-}
-
-// --- Ricart-Agrawala RPCs ---
-func (h *HMS) RequestPermission(req models.RicartRequest, reply *models.RicartReply) error {
-	h.server.RA.HandleRequest(req, reply)
-	return nil
-}
-
-func (h *HMS) ReceiveReply(req models.RicartReply, reply *models.RicartReply) error {
-	h.server.RA.HandleReply()
-	return nil
 }
 
 // --- Bully RPCs ---
@@ -64,9 +52,6 @@ func (h *HMS) AppendEntries(args models.AppendEntriesArgs, reply *models.AppendE
 // --- HMS Service RPCs ---
 
 func (h *HMS) RegisterPatient(args models.RegisterArgs, reply *models.GenericReply) error {
-	h.server.RA.RequestCS()
-	defer h.server.RA.ReleaseCS()
-
 	if h.server.Bully.State != models.LEADER {
 		reply.Success = false
 		reply.Message = fmt.Sprintf("Not the leader. Contact leader %d", h.server.Bully.LeaderID)
@@ -87,9 +72,6 @@ func (h *HMS) RegisterPatient(args models.RegisterArgs, reply *models.GenericRep
 }
 
 func (h *HMS) UpdateDiagnosis(args models.DiagnosisArgs, reply *models.GenericReply) error {
-	h.server.RA.RequestCS()
-	defer h.server.RA.ReleaseCS()
-
 	if h.server.Bully.State != models.LEADER {
 		reply.Success = false
 		reply.Message = "Not the leader."
@@ -120,9 +102,6 @@ func (h *HMS) UpdateDiagnosis(args models.DiagnosisArgs, reply *models.GenericRe
 }
 
 func (h *HMS) GenerateBill(args models.BillArgs, reply *models.GenericReply) error {
-	h.server.RA.RequestCS()
-	defer h.server.RA.ReleaseCS()
-
 	if h.server.Bully.State != models.LEADER {
 		reply.Success = false
 		reply.Message = "Not the leader."
@@ -173,20 +152,11 @@ func main() {
 	fmt.Print("Enter local Port to listen on: ")
 	fmt.Scan(&port)
 
-	// LAN CONFIGURATION: Replace these with actual IP addresses of computers in your network.
-	// Example: Node 0 on 192.168.1.10, Node 1 on 192.168.1.11, etc.
+	// LAN CONFIGURATION
 	nodes := map[int]string{
-		0: "192.168.1.10:8080",
-		1: "192.168.1.11:8081",
-		2: "192.168.1.12:8082",
+		0: "10.38.21.222:8080",
+		1: "10.38.21.68:8081",
 	}
-
-	// For local testing on one machine, you can keep them as localhost:
-	// nodes := map[int]string{
-	// 	0: "localhost:8080",
-	// 	1: "localhost:8081",
-	// 	2: "localhost:8082",
-	// }
 
 	s := &Server{
 		ID:       id,
@@ -194,7 +164,6 @@ func main() {
 		Database: make(map[int]models.Patient),
 	}
 
-	s.RA = &algorithms.RicartAgrawala{ID: id, Nodes: nodes}
 	s.Bully = &algorithms.Bully{ID: id, Nodes: nodes, LeaderID: -1, State: models.FOLLOWER}
 	s.Raft = &algorithms.Raft{
 		ID:    id,
@@ -210,7 +179,6 @@ func main() {
 	hms := &HMS{server: s}
 	rpc.Register(hms)
 
-	// Listen on all interfaces (0.0.0.0)
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatal(err)
@@ -218,15 +186,18 @@ func main() {
 
 	s.LogInfo("HMS Server running on all interfaces at port %s", port)
 
-	// Background threads for leader election / health checks
 	go func() {
 		for {
 			time.Sleep(5 * time.Second)
 			if s.Bully.State != models.LEADER {
 				if s.Bully.LeaderID != -1 {
 					s.mu.Lock()
-					leaderAddr := nodes[s.Bully.LeaderID]
+					leaderAddr, ok := nodes[s.Bully.LeaderID]
 					s.mu.Unlock()
+					if !ok {
+						s.Bully.StartElection()
+						continue
+					}
 					client, err := rpc.Dial("tcp", leaderAddr)
 					if err != nil {
 						s.LogInfo("Leader %d (%s) timed out, starting election", s.Bully.LeaderID, leaderAddr)

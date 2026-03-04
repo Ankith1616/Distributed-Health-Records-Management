@@ -2,22 +2,76 @@ package main
 
 import (
 	"fmt"
+	"hms/algorithms"
 	"hms/models"
 	"log"
+	"net"
 	"net/rpc"
 	"os"
 )
 
+// ClientRA handles Ricart-Agrawala RPCs for client coordination
+type ClientRA struct {
+	ra *algorithms.RicartAgrawala
+}
+
+func (c *ClientRA) RequestPermission(req models.RicartRequest, reply *models.RicartReply) error {
+	c.ra.HandleRequest(req, reply)
+	return nil
+}
+
+func (c *ClientRA) ReceiveReply(req models.RicartReply, reply *models.RicartReply) error {
+	c.ra.HandleReply()
+	return nil
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run client.go <server_address>")
+	if len(os.Args) < 4 {
+		fmt.Println("Usage: go run client.go <client_id> <client_port> <server_address>")
+		fmt.Println("Example: go run client_app/client.go 0 9000 localhost:8080")
 		return
 	}
 
-	serverAddr := os.Args[1]
-	client, err := rpc.Dial("tcp", serverAddr)
+	var clientID int
+	fmt.Sscanf(os.Args[1], "%d", &clientID)
+	clientPort := os.Args[2]
+	serverAddr := os.Args[3]
+
+	// Peer nodes for client coordination (only clients participate in RA)
+	clientNodes := map[int]string{
+		0: "localhost:9000",
+		1: "localhost:9001",
+	}
+
+	ra := &algorithms.RicartAgrawala{
+		ID:          clientID,
+		Nodes:       clientNodes,
+		ServiceName: "ClientRA",
+	}
+
+	clientRA := &ClientRA{ra: ra}
+	rpc.Register(clientRA)
+
+	// Start RPC server for client-to-client RA
+	listener, err := net.Listen("tcp", ":"+clientPort)
 	if err != nil {
-		log.Fatal("Dialing:", err)
+		log.Fatalf("Failed to listen on port %s: %v", clientPort, err)
+	}
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err == nil {
+				go rpc.ServeConn(conn)
+			}
+		}
+	}()
+
+	fmt.Printf("Client %d RA server running on port %s\n", clientID, clientPort)
+
+	// Dial the HMS server (Leader)
+	serverClient, err := rpc.Dial("tcp", serverAddr)
+	if err != nil {
+		log.Fatal("Dialing server:", err)
 	}
 
 	for {
@@ -41,9 +95,12 @@ func main() {
 			fmt.Print("Enter Patient Name: ")
 			fmt.Scan(&name)
 
+			ra.RequestCS()
 			args := models.RegisterArgs{ID: id, Name: name}
 			var reply models.GenericReply
-			err = client.Call("HMS.RegisterPatient", args, &reply)
+			err = serverClient.Call("HMS.RegisterPatient", args, &reply)
+			ra.ReleaseCS()
+
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
@@ -57,9 +114,12 @@ func main() {
 			fmt.Print("Enter Diagnosis: ")
 			fmt.Scan(&diagnosis)
 
+			ra.RequestCS()
 			args := models.DiagnosisArgs{ID: id, Diagnosis: diagnosis}
 			var reply models.GenericReply
-			err = client.Call("HMS.UpdateDiagnosis", args, &reply)
+			err = serverClient.Call("HMS.UpdateDiagnosis", args, &reply)
+			ra.ReleaseCS()
+
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
@@ -73,9 +133,12 @@ func main() {
 			fmt.Print("Enter Bill Amount: ")
 			fmt.Scan(&amount)
 
+			ra.RequestCS()
 			args := models.BillArgs{ID: id, Amount: amount}
 			var reply models.GenericReply
-			err = client.Call("HMS.GenerateBill", args, &reply)
+			err = serverClient.Call("HMS.GenerateBill", args, &reply)
+			ra.ReleaseCS()
+
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else {
@@ -88,7 +151,7 @@ func main() {
 
 			args := models.GetPatientArgs{ID: id}
 			var reply models.GetPatientReply
-			err = client.Call("HMS.GetPatientRecord", args, &reply)
+			err = serverClient.Call("HMS.GetPatientRecord", args, &reply)
 			if err != nil {
 				fmt.Println("Error:", err)
 			} else if reply.Success {

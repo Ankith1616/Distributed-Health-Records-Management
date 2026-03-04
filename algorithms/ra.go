@@ -9,15 +9,16 @@ import (
 )
 
 type RicartAgrawala struct {
-	ID         int
-	Nodes      map[int]string
-	Clock      int
-	Requesting bool
-	Replies    int
-	Deferred   []int
-	InCS       bool
-	mu         sync.Mutex
-	replyMu    sync.Mutex
+	ID          int
+	Nodes       map[int]string
+	Clock       int
+	Requesting  bool
+	Replies     int
+	Deferred    []int
+	InCS        bool
+	ServiceName string // Added to allow different RPC service names (e.g., ClientRA or HMS)
+	mu          sync.Mutex
+	replyMu     sync.Mutex
 }
 
 func (ra *RicartAgrawala) RequestCS() {
@@ -28,7 +29,7 @@ func (ra *RicartAgrawala) RequestCS() {
 	timestamp := ra.Clock
 	ra.mu.Unlock()
 
-	log.Printf("[Server %d] Requesting CS (RA) with timestamp %d", ra.ID, timestamp)
+	log.Printf("[Client %d] Requesting CS (RA) with timestamp %d", ra.ID, timestamp)
 
 	var wg sync.WaitGroup
 	for id, addr := range ra.Nodes {
@@ -44,11 +45,11 @@ func (ra *RicartAgrawala) RequestCS() {
 			}
 			defer client.Close()
 			var reply models.RicartReply
-			err = client.Call("HMS.RequestPermission", models.RicartRequest{Timestamp: timestamp, NodeID: ra.ID}, &reply)
+			// Use the ServiceName for routing RPCs
+			serviceCall := ra.ServiceName + ".RequestPermission"
+			err = client.Call(serviceCall, models.RicartRequest{Timestamp: timestamp, NodeID: ra.ID}, &reply)
 			if err == nil {
-				ra.replyMu.Lock()
-				ra.Replies++
-				ra.replyMu.Unlock()
+				ra.HandleReply()
 			}
 		}(id, addr)
 	}
@@ -66,7 +67,7 @@ func (ra *RicartAgrawala) RequestCS() {
 	ra.mu.Lock()
 	ra.InCS = true
 	ra.mu.Unlock()
-	log.Printf("[Server %d] Entered Critical Section (RA)", ra.ID)
+	log.Printf("[Client %d] Entering CS", ra.ID)
 }
 
 func (ra *RicartAgrawala) ReleaseCS() {
@@ -77,7 +78,7 @@ func (ra *RicartAgrawala) ReleaseCS() {
 	ra.Deferred = []int{}
 	ra.mu.Unlock()
 
-	log.Printf("[Server %d] Released CS (RA), replying to %v", ra.ID, deferred)
+	log.Printf("[Client %d] Leaving CS, replying to %v", ra.ID, deferred)
 
 	for _, id := range deferred {
 		addr := ra.Nodes[id]
@@ -88,7 +89,8 @@ func (ra *RicartAgrawala) ReleaseCS() {
 			}
 			defer client.Close()
 			var reply models.RicartReply
-			client.Call("HMS.ReceiveReply", models.RicartReply{NodeID: ra.ID}, &reply)
+			serviceCall := ra.ServiceName + ".ReceiveReply"
+			client.Call(serviceCall, models.RicartReply{NodeID: ra.ID}, &reply)
 		}(id, addr)
 	}
 }
@@ -114,4 +116,5 @@ func (ra *RicartAgrawala) HandleReply() {
 	ra.replyMu.Lock()
 	ra.Replies++
 	ra.replyMu.Unlock()
+	log.Printf("[Client %d] Received reply", ra.ID)
 }
