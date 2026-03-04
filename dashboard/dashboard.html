@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Health System — Live Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-card: rgba(16, 24, 48, 0.85);
+            --bg-card-hover: rgba(20, 32, 60, 0.95);
+            --border: rgba(56, 189, 248, 0.15);
+            --border-bright: rgba(56, 189, 248, 0.4);
+            --accent-blue: #38bdf8;
+            --accent-teal: #2dd4bf;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --accent-yellow: #fbbf24;
+            --accent-purple: #a78bfa;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #475569;
+            --success: #22c55e;
+            --failure: #ef4444;
+            --warning: #f59e0b;
+            --online: #4ade80;
+            --offline: #f87171;
+            --leader-glow: 0 0 30px rgba(56, 189, 248, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at 0% 0%, rgba(56, 189, 248, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(45, 212, 191, 0.05) 0%, transparent 50%);
+        }
+
+        /* ── Header ── */
+        header {
+            background: rgba(10, 14, 26, 0.95);
+            border-bottom: 1px solid var(--border-bright);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .conn-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            transition: all 0.3s;
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-red);
+            transition: background 0.3s;
+        }
+
+        .conn-dot.connected {
+            background: var(--accent-green);
+            animation: pulse-conn 2s infinite;
+        }
+
+        @keyframes pulse-conn {
+
+            0%,
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+            }
+
+            50% {
+                opacity: 0.8;
+                box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+            }
+        }
+
+        /* ── Main Grid ── */
+        main {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+            padding: 24px 32px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(12px);
+            transition: border-color 0.3s, box-shadow 0.3s;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: var(--border-bright);
+            box-shadow: 0 4px 32px rgba(56, 189, 248, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-icon {
+            font-size: 18px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        /* Grid column spans */
+        .col-3 {
+            grid-column: span 3;
+        }
+
+        .col-4 {
+            grid-column: span 4;
+        }
+
+        .col-5 {
+            grid-column: span 5;
+        }
+
+        .col-6 {
+            grid-column: span 6;
+        }
+
+        .col-7 {
+            grid-column: span 7;
+        }
+
+        .col-8 {
+            grid-column: span 8;
+        }
+
+        .col-9 {
+            grid-column: span 9;
+        }
+
+        .col-12 {
+            grid-column: span 12;
+        }
+
+        /* ── Leader Card ── */
+        #leader-card {
+            grid-column: span 3;
+            border-color: rgba(56, 189, 248, 0.3);
+            background: linear-gradient(135deg, rgba(16, 24, 48, 0.95), rgba(8, 24, 48, 0.98));
+        }
+
+        .leader-crown {
+            font-size: 40px;
+            text-align: center;
+            animation: float 3s ease-in-out infinite;
+            display: block;
+            margin: 8px 0;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
+        }
+
+        .leader-id {
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--accent-blue);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .leader-addr {
+            font-size: 11px;
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .leader-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--accent-green);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+
+        .leader-status.failed {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--accent-red);
+            border-color: rgba(248, 113, 113, 0.2);
+        }
+
+        /* ── Status Dot ── */
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .status-dot.online {
+            background: var(--online);
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-dot.offline,
+        .status-dot.failed {
+            background: var(--offline);
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 5px rgba(74, 222, 128, 0);
+            }
+        }
+
+        /* ── Tables ── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th {
+            text-align: left;
+            padding: 8px 10px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 9px 10px;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.05);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(56, 189, 248, 0.03);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-green {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(74, 222, 128, 0.25);
+        }
+
+        .badge-red {
+            background: rgba(248, 113, 113, 0.12);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 113, 113, 0.25);
+        }
+
+        .badge-yellow {
+            background: rgba(251, 191, 36, 0.12);
+            color: var(--accent-yellow);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+        }
+
+        .badge-blue {
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--accent-blue);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+
+        .badge-purple {
+            background: rgba(167, 139, 250, 0.12);
+            color: var(--accent-purple);
+            border: 1px solid rgba(167, 139, 250, 0.25);
+        }
+
+        /* ── RegionServer Cards ── */
+        .rs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .rs-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s;
+        }
+
+        .rs-card.failed {
+            border-color: rgba(248, 113, 113, 0.3);
+            background: rgba(248, 113, 113, 0.04);
+        }
+
+        .rs-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .rs-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-teal);
+        }
+
+        .rs-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .rs-stat-val {
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+        }
+
+        /* ── Consensus ── */
+        .vote-bars {
+            display: flex;
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .vote-bar-wrap {
+            flex: 1;
+        }
+
+        .vote-bar-label {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .vote-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--border);
+            overflow: hidden;
+        }
+
+        .vote-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .vote-bar-fill.yes {
+            background: var(--accent-green);
+        }
+
+        .vote-bar-fill.no {
+            background: var(--accent-red);
+        }
+
+        .consensus-result {
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+        }
+
+        .consensus-result.committed {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--accent-green);
+            border: 1px solid rgba(74, 222, 128, 0.25);
+        }
+
+        .consensus-result.aborted {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 113, 113, 0.25);
+        }
+
+        /* ── Logs ── */
+        #log-feed {
+            height: 260px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        #log-feed::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #log-feed::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #log-feed::-webkit-scrollbar-thumb {
+            background: var(--border-bright);
+            border-radius: 2px;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .log-level {
+            width: 52px;
+            flex-shrink: 0;
+            font-weight: 600;
+        }
+
+        .log-src {
+            width: 90px;
+            flex-shrink: 0;
+            color: var(--accent-teal);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .log-msg {
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
+        .level-INFO {
+            color: var(--accent-blue);
+        }
+
+        .level-SUCCESS {
+            color: var(--accent-green);
+        }
+
+        .level-WARN {
+            color: var(--accent-yellow);
+        }
+
+        .level-ERROR {
+            color: var(--accent-red);
+        }
+
+        .level-EVENT {
+            color: var(--accent-purple);
+        }
+
+        /* ── Lock Table ── */
+        .lock-row {
+            transition: background 0.3s;
+        }
+
+        .lock-row.new-lock {
+            animation: lockHighlight 1s ease;
+        }
+
+        @keyframes lockHighlight {
+            0% {
+                background: rgba(251, 191, 36, 0.2);
+            }
+
+            100% {
+                background: transparent;
+            }
+        }
+
+        /* ── Failure Controls ── */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .ctrl-btn {
+            padding: 12px 8px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .ctrl-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .ctrl-btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-kill {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-kill:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.3));
+        }
+
+        .btn-recover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-recover:hover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(22, 163, 74, 0.3));
+        }
+
+        /* ── Request History ── */
+        #history-list {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .req-entry {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 11px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .req-op {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .req-op.create {
+            background: rgba(167, 139, 250, 0.2);
+            color: var(--accent-purple);
+        }
+
+        .req-op.update {
+            background: rgba(56, 189, 248, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .req-op.read {
+            background: rgba(45, 212, 191, 0.2);
+            color: var(--accent-teal);
+        }
+
+        /* ── Patient Records ── */
+        #records-search {
+            width: 100%;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            margin-bottom: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #records-search:focus {
+            border-color: var(--accent-blue);
+        }
+
+        #records-table-wrap {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        /* ── Scrollbars ── */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-bright);
+            border-radius: 2px;
+        }
+
+        /* ── Failure Events ── */
+        #failure-list {
+            max-height: 180px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        .failure-item {
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            background: rgba(248, 113, 113, 0.06);
+            border: 1px solid rgba(248, 113, 113, 0.15);
+            color: #fca5a5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 1200px) {
+            .col-3 {
+                grid-column: span 6;
+            }
+
+            .col-4 {
+                grid-column: span 6;
+            }
+
+            .col-5 {
+                grid-column: span 6;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* ── Consensus history mini list ── */
+        .consensus-hist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 8px;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .last-update {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-left">
+            <div>
+                <div class="logo">⚕ DistributedHealth OS</div>
+                <div class="logo-sub">Real-Time Patient Record Management — BigTable/HBase Simulation</div>
+            </div>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <div class="last-update" id="last-update">Last update: —</div>
+            <div class="conn-badge">
+                <div class="conn-dot" id="conn-dot"></div>
+                <span id="conn-label">Connecting…</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- ① Leader Node -->
+        <div class="card" id="leader-card">
+            <div class="card-header">
+                <span class="card-icon">👑</span>
+                <span class="card-title">Leader Node</span>
+            </div>
+            <span class="leader-crown" id="leader-crown">👑</span>
+            <div class="leader-id" id="leader-id">—</div>
+            <div class="leader-addr" id="leader-addr">—</div>
+            <div class="leader-status" id="leader-status-badge">
+                <span class="status-dot online"></span>
+                <span>ACTIVE LEADER</span>
+            </div>
+            <div style="margin-top:12px; font-size:11px; color:var(--text-muted); text-align:center;" id="leader-algo">
+                Algorithm: Lowest-ID ZooKeeper Election
+            </div>
+        </div>
+
+        <!-- ② Active Clients -->
+        <div class="card col-4">
+            <div class="card-header">
+                <span class="card-icon">👥</span>
+                <span class="card-title">Active Clients</span>
+                <span class="badge badge-blue" id="client-count">0</span>
+            </div>
+            <div style="max-height:220px; overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>Operation</th>
+                            <th>Patient</th>
+                            <th>Status</th>
+                            <th>Ops</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clients-body">
+                        <tr>
+                            <td colspan="5" class="empty-state">No clients yet…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ③ RegionServers -->
+        <div class="card col-5">
+            <div class="card-header">
+                <span class="card-icon">🖥️</span>
+                <span class="card-title">RegionServers</span>
+            </div>
+            <div class="rs-grid" id="rs-grid">
+                <div class="empty-state">Loading…</div>
+            </div>
+        </div>
+
+        <!-- ④ Lock Table -->
+        <div class="card col-4">
+            <div class="card-header">
+                <span class="card-icon">🔒</span>
+                <span class="card-title">Lock Table</span>
+                <span class="badge badge-yellow" id="lock-count">0</span>
+            </div>
+            <div style="max-height:200px; overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Held By</th>
+                            <th>Acquired</th>
+                            <th>Waiters</th>
+                        </tr>
+                    </thead>
+                    <tbody id="locks-body">
+                        <tr>
+                            <td colspan="4" class="empty-state">No active locks</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top:10px; font-size:10px; color:var(--text-muted);">
+                Mutual exclusion: one writer per patient record at a time
+            </div>
+        </div>
+
+        <!-- ⑤ Consensus -->
+        <div class="card col-4">
+            <div class="card-header">
+                <span class="card-icon">🗳️</span>
+                <span class="card-title">Consensus Votes</span>
+            </div>
+            <div id="consensus-op" style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">
+                No consensus rounds yet
+            </div>
+            <div class="vote-bars">
+                <div class="vote-bar-wrap">
+                    <div class="vote-bar-label">
+                        <span style="color:var(--accent-green);">✅ YES</span>
+                        <span id="yes-count">0</span>
+                    </div>
+                    <div class="vote-bar">
+                        <div class="vote-bar-fill yes" id="yes-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="vote-bar-wrap">
+                    <div class="vote-bar-label">
+                        <span style="color:var(--accent-red);">❌ NO</span>
+                        <span id="no-count">0</span>
+                    </div>
+                    <div class="vote-bar">
+                        <div class="vote-bar-fill no" id="no-bar" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="consensus-result committed" id="consensus-result">—</div>
+            <div style="margin-top:14px; font-size:11px; color:var(--text-muted); font-weight:600;">Recent Rounds</div>
+            <div id="consensus-history" style="margin-top:6px; max-height:120px; overflow-y:auto;"></div>
+        </div>
+
+        <!-- ⑥ Failure Controls -->
+        <div class="card col-4">
+            <div class="card-header">
+                <span class="card-icon">⚡</span>
+                <span class="card-title">Failure Simulation</span>
+            </div>
+            <div class="controls-grid">
+                <button class="ctrl-btn btn-kill" onclick="killLeader()" id="btn-kill-leader">💀 Kill Leader</button>
+                <button class="ctrl-btn btn-kill" onclick="killServer('RS-1')" id="btn-kill-rs1">💀 Kill RS-1</button>
+                <button class="ctrl-btn btn-kill" onclick="killServer('RS-2')" id="btn-kill-rs2">💀 Kill RS-2</button>
+                <button class="ctrl-btn btn-recover" onclick="recoverAll()" id="btn-recover">✅ Recover All</button>
+            </div>
+            <div style="margin-top:14px;">
+                <div style="font-size:11px; font-weight:600; color:var(--text-muted); margin-bottom:8px;">Failure Events
+                </div>
+                <div id="failure-list">
+                    <div class="empty-state">No failure events</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ⑦ Patient Records -->
+        <div class="card col-7">
+            <div class="card-header">
+                <span class="card-icon">📋</span>
+                <span class="card-title">Patient Records</span>
+                <span class="badge badge-teal" id="record-count"
+                    style="background:rgba(45,212,191,0.12);color:var(--accent-teal);border:1px solid rgba(45,212,191,0.25);">0</span>
+            </div>
+            <input type="text" id="records-search" placeholder="🔍 Search by name, ID, diagnosis…"
+                oninput="filterRecords()">
+            <div id="records-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Blood</th>
+                            <th>Ward</th>
+                            <th>Diagnosis</th>
+                            <th>Prescription</th>
+                            <th>Stored On</th>
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-body">
+                        <tr>
+                            <td colspan="9" class="empty-state">No records yet — clients will create them shortly…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ⑧ Request History -->
+        <div class="card col-5">
+            <div class="card-header">
+                <span class="card-icon">📜</span>
+                <span class="card-title">Request History</span>
+                <span class="badge badge-purple" id="req-count">0</span>
+            </div>
+            <div id="history-list">
+                <div class="empty-state">No requests yet…</div>
+            </div>
+        </div>
+
+        <!-- ⑨ System Logs -->
+        <div class="card col-12">
+            <div class="card-header">
+                <span class="card-icon">🖥️</span>
+                <span class="card-title">System Logs</span>
+                <label
+                    style="margin-left:auto; font-size:11px; color:var(--text-muted); display:flex; gap:6px; align-items:center; cursor:pointer;">
+                    <input type="checkbox" id="auto-scroll" checked> Auto-scroll
+                </label>
+            </div>
+            <div id="log-feed"></div>
+        </div>
+
+    </main>
+
+    <script>
+        // ─────────────────────────────────────────────
+        // WebSocket Connection
+        // ─────────────────────────────────────────────
+
+        let reconnDelay = 1000;
+        let leaderAddr = ''; // Dynamic leader address for simulation controls
+
+        function connect() {
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+            ws.onopen = () => {
+                document.getElementById('conn-dot').classList.add('connected');
+                document.getElementById('conn-label').textContent = 'Connected';
+                reconnectDelay = 1000;
+            };
+
+            ws.onclose = () => {
+                document.getElementById('conn-dot').classList.remove('connected');
+                document.getElementById('conn-label').textContent = 'Reconnecting…';
+                setTimeout(connect, reconnectDelay);
+                reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+            };
+
+            ws.onmessage = (evt) => {
+                try {
+                    const state = JSON.parse(evt.data);
+                    updateDashboard(state);
+                    document.getElementById('last-update').textContent =
+                        'Last update: ' + new Date().toLocaleTimeString();
+                } catch (e) {
+                    console.error('Parse error:', e);
+                }
+            };
+        }
+
+        connect();
+
+        // ─────────────────────────────────────────────
+        // Dashboard Update
+        // ─────────────────────────────────────────────
+
+        function updateDashboard(state) {
+            updateLeader(state.leader);
+            updateClients(state.clients || []);
+            updateNodes(state.nodes || []);
+            updateLocks(state.lock_table || []);
+            updateConsensus(state.last_consensus, state.all_consensus || []);
+            updateRecords(state.patient_records || []);
+            updateHistory(state.request_history || []);
+            updateLogs(state.logs || []);
+            updateFailures(state.failure_events || []);
+
+            // Update leaderAddr for simulation controls (e.g. "localhost:8000" -> "http://localhost:8000")
+            if (state.leader && state.leader.address) {
+                leaderAddr = 'http://' + state.leader.address;
+            } else {
+                leaderAddr = 'http://' + location.hostname + ':8000'; // Fallback
+            }
+        }
+
+        // ── Leader ──────────────────────────────────
+        function updateLeader(leader) {
+            if (!leader) {
+                document.getElementById('leader-id').textContent = 'NO LEADER';
+                document.getElementById('leader-addr').textContent = 'Electing…';
+                document.getElementById('leader-status-badge').className = 'leader-status failed';
+                document.getElementById('leader-crown').textContent = '❓';
+                return;
+            }
+            document.getElementById('leader-id').textContent = leader.id;
+            document.getElementById('leader-addr').textContent = leader.address;
+            document.getElementById('leader-crown').textContent = '👑';
+            const badge = document.getElementById('leader-status-badge');
+            if (leader.status === 'ONLINE') {
+                badge.className = 'leader-status';
+                badge.innerHTML = '<span class="status-dot online"></span><span>ACTIVE LEADER</span>';
+            } else {
+                badge.className = 'leader-status failed';
+                badge.innerHTML = '<span class="status-dot failed"></span><span>LEADER FAILED</span>';
+            }
+        }
+
+        // ── Clients ──────────────────────────────────
+        function updateClients(clients) {
+            document.getElementById('client-count').textContent = clients.length;
+            const tbody = document.getElementById('clients-body');
+            if (!clients.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No clients yet…</td></tr>';
+                return;
+            }
+            tbody.innerHTML = clients.map(c => `
+    <tr>
+      <td><span class="mono" style="color:var(--accent-teal)">${c.client_id}</span></td>
+      <td><span class="badge ${opBadge(c.last_operation)}">${c.last_operation || '—'}</span></td>
+      <td><span class="mono">${c.last_patient_id || '—'}</span></td>
+      <td>${statusBadge(c.status)}</td>
+      <td class="mono">${c.op_count}</td>
+    </tr>
+  `).join('');
+        }
+
+        // ── Nodes / RegionServers ────────────────────
+        function updateNodes(nodes) {
+            const rsNodes = nodes.filter(n => n.role === 'REGION_SERVER');
+            const grid = document.getElementById('rs-grid');
+            if (!rsNodes.length) {
+                grid.innerHTML = '<div class="empty-state">No RegionServers</div>';
+                return;
+            }
+            grid.innerHTML = rsNodes.map(n => `
+    <div class="rs-card ${n.status !== 'ONLINE' ? 'failed' : ''}">
+      <div class="rs-card-header">
+        <span class="rs-id">${n.id}</span>
+        <span class="status-dot ${n.status === 'ONLINE' ? 'online' : 'failed'}"></span>
+      </div>
+      <div class="rs-stat"><span>Status</span><span class="rs-stat-val">${n.status}</span></div>
+      <div class="rs-stat"><span>Records</span><span class="rs-stat-val" style="color:var(--accent-blue)">${n.record_count}</span></div>
+      <div class="rs-stat"><span>Address</span><span class="rs-stat-val mono" style="font-size:10px">${n.address}</span></div>
+      <div class="rs-stat"><span>Heartbeat</span><span class="rs-stat-val mono" style="font-size:10px">${formatTime(n.last_heartbeat)}</span></div>
+    </div>
+  `).join('');
+        }
+
+        // ── Locks ────────────────────────────────────
+        function updateLocks(locks) {
+            document.getElementById('lock-count').textContent = locks.length;
+            const tbody = document.getElementById('locks-body');
+            if (!locks.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No active locks</td></tr>';
+                return;
+            }
+            tbody.innerHTML = locks.map(l => `
+    <tr class="lock-row">
+      <td><span class="mono" style="color:var(--accent-yellow)">${l.patient_id}</span></td>
+      <td><span class="mono" style="color:var(--accent-blue)">${l.held_by}</span></td>
+      <td class="mono" style="font-size:10px;">${formatTime(l.acquired_at)}</td>
+      <td>${(l.wait_queue || []).length > 0
+                    ? `<span class="badge badge-yellow">${l.wait_queue.length} waiting</span>`
+                    : '<span style="color:var(--text-muted)">—</span>'}</td>
+    </tr>
+  `).join('');
+        }
+
+        // ── Consensus ────────────────────────────────
+        function updateConsensus(last, history) {
+            if (!last) return;
+
+            const yesVotes = (last.votes || []).filter(v => v.vote === 'YES').length;
+            const noVotes = (last.votes || []).filter(v => v.vote === 'NO').length;
+            const total = yesVotes + noVotes || 1;
+
+            document.getElementById('consensus-op').textContent =
+                `Op: ${last.operation_id} | ${last.operation} | Patient ${last.patient_id}`;
+            document.getElementById('yes-count').textContent = yesVotes;
+            document.getElementById('no-count').textContent = noVotes;
+            document.getElementById('yes-bar').style.width = (yesVotes / total * 100) + '%';
+            document.getElementById('no-bar').style.width = (noVotes / total * 100) + '%';
+
+            const res = document.getElementById('consensus-result');
+            res.textContent = last.result === 'COMMITTED' ? '✅ COMMITTED' : '❌ ABORTED';
+            res.className = 'consensus-result ' + (last.result === 'COMMITTED' ? 'committed' : 'aborted');
+
+            // History list
+            const histEl = document.getElementById('consensus-history');
+            const recent = [...history].reverse().slice(0, 8);
+            histEl.innerHTML = recent.map(r => {
+                const y = (r.votes || []).filter(v => v.vote === 'YES').length;
+                const n = (r.votes || []).filter(v => v.vote === 'NO').length;
+                return `
+      <div class="consensus-hist-item">
+        <span class="mono" style="color:var(--text-muted); font-size:10px;">${r.operation_id}</span>
+        <span style="font-size:10px; color:var(--text-secondary); margin:0 8px;">${r.operation} · P${r.patient_id}</span>
+        <span style="font-size:10px; color:var(--accent-green);">Y:${y}</span>
+        <span style="font-size:10px; color:var(--accent-red); margin-left:4px;">N:${n}</span>
+        <span class="badge ${r.result === 'COMMITTED' ? 'badge-green' : 'badge-red'}" style="margin-left:6px;">${r.result}</span>
+      </div>`;
+            }).join('');
+        }
+
+        // ── Records ──────────────────────────────────
+        function updateRecords(records) {
+            allRecords = records;
+            document.getElementById('record-count').textContent = records.length;
+            filterRecords();
+        }
+
+        function filterRecords() {
+            const q = document.getElementById('records-search').value.toLowerCase();
+            const filtered = allRecords.filter(r =>
+                !q ||
+                r.patient_id?.toLowerCase().includes(q) ||
+                r.name?.toLowerCase().includes(q) ||
+                r.diagnosis?.toLowerCase().includes(q) ||
+                r.ward?.toLowerCase().includes(q)
+            );
+
+            const tbody = document.getElementById('records-body');
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No records found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(r => `
+    <tr>
+      <td><span class="mono" style="color:var(--accent-yellow)">${r.patient_id}</span></td>
+      <td>${r.name || '—'}</td>
+      <td class="mono">${r.age || '—'}</td>
+      <td><span class="badge badge-blue">${r.blood_type || '—'}</span></td>
+      <td><span class="badge badge-purple">${r.ward || '—'}</span></td>
+      <td style="color:var(--accent-red); font-size:11px;">${r.diagnosis || '—'}</td>
+      <td style="font-size:11px; color:var(--text-secondary);">${r.prescription || '—'}</td>
+      <td class="mono" style="font-size:10px; color:var(--accent-teal);">${(r.stored_on || []).join(', ') || '—'}</td>
+      <td class="mono" style="font-size:10px;">${formatTime(r.last_updated)}</td>
+    </tr>
+  `).join('');
+        }
+
+        // ── Request History ──────────────────────────
+        function updateHistory(history) {
+            document.getElementById('req-count').textContent = history.length;
+            const el = document.getElementById('history-list');
+            const recent = [...history].reverse().slice(0, 30);
+            if (!recent.length) {
+                el.innerHTML = '<div class="empty-state">No requests yet…</div>';
+                return;
+            }
+            el.innerHTML = recent.map(h => `
+    <div class="req-entry">
+      <span class="mono" style="color:var(--text-muted); font-size:10px; flex-shrink:0;">${formatTime(h.timestamp)}</span>
+      <span class="req-op ${h.operation?.toLowerCase()}">${h.operation}</span>
+      <span class="mono" style="color:var(--accent-teal); flex-shrink:0;">${h.client_id}</span>
+      <span style="color:var(--text-muted);">→</span>
+      <span class="mono" style="color:var(--accent-yellow);">${h.patient_id}</span>
+      <span class="badge ${statusClass(h.status)}" style="margin-left:auto;">${h.status}</span>
+      <span class="mono" style="color:var(--text-muted); font-size:10px; flex-shrink:0;">${h.latency}</span>
+    </div>
+  `).join('');
+        }
+
+        // ── Logs ──────────────────────────────────────
+        let lastLogTimestamp = null;
+
+        function updateLogs(logs) {
+            const feed = document.getElementById('log-feed');
+            const autoScroll = document.getElementById('auto-scroll').checked;
+
+            // Only add new entries (avoid re-rendering all).
+            const newLogs = lastLogTimestamp
+                ? logs.filter(l => new Date(l.timestamp) > new Date(lastLogTimestamp))
+                : logs.slice(-80);
+
+            if (newLogs.length > 0) {
+                lastLogTimestamp = newLogs[newLogs.length - 1].timestamp;
+                newLogs.forEach(l => {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry';
+                    div.innerHTML = `
+        <span class="log-time">${formatTime(l.timestamp)}</span>
+        <span class="log-level level-${l.level}">${l.level}</span>
+        <span class="log-src">${l.source}</span>
+        <span class="log-msg">${l.message}</span>
+      `;
+                    feed.appendChild(div);
+                });
+
+                // Keep only last 200 entries in DOM.
+                while (feed.children.length > 200) feed.removeChild(feed.firstChild);
+
+                if (autoScroll) feed.scrollTop = feed.scrollHeight;
+            }
+        }
+
+        // ── Failures ─────────────────────────────────
+        function updateFailures(events) {
+            const el = document.getElementById('failure-list');
+            if (!events.length) {
+                el.innerHTML = '<div class="empty-state">No failure events</div>';
+                return;
+            }
+            el.innerHTML = [...events].reverse().slice(0, 15).map(e =>
+                `<div class="failure-item">💥 ${e}</div>`
+            ).join('');
+        }
+
+        // ─────────────────────────────────────────────
+        // Failure Simulation Controls
+        // ─────────────────────────────────────────────
+
+        async function killLeader() {
+            const btn = document.getElementById('btn-kill-leader');
+            btn.textContent = '💀 killing…';
+            try {
+                await fetch(`${leaderAddr}/admin/kill-leader`, { method: 'POST' });
+            } catch (e) { console.error('Kill Leader failed:', e); }
+            setTimeout(() => btn.textContent = '💀 Kill Leader', 1000);
+        }
+
+        async function killServer(id) {
+            const btnId = `btn-kill-${id.toLowerCase().replace('-', '')}`;
+            const btn = document.getElementById(btnId);
+            if (btn) btn.textContent = '⏳ killing…';
+            try {
+                await fetch(`${leaderAddr}/admin/kill-server/${id}`, { method: 'POST' });
+            } catch (e) { console.error('Kill Server failed:', e); }
+            setTimeout(() => { if (btn) btn.textContent = `💀 Kill ${id}`; }, 1000);
+        }
+
+        async function recoverAll() {
+            const btn = document.getElementById('btn-recover');
+            btn.textContent = '⏳ Recovering…';
+            try {
+                await fetch(`${leaderAddr}/admin/recover-all`, { method: 'POST' });
+            } catch (e) { console.error('Recover All failed:', e); }
+            setTimeout(() => btn.textContent = '✅ Recover All', 1500);
+        }
+
+        // ─────────────────────────────────────────────
+        // Helpers
+        // ─────────────────────────────────────────────
+
+        function formatTime(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts);
+            if (isNaN(d)) return '—';
+            return d.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        function opBadge(op) {
+            const m = { CREATE: 'create', UPDATE: 'update', READ: 'read' };
+            return 'req-op ' + (m[op] || 'read');
+        }
+
+        function statusBadge(status) {
+            const m = {
+                IDLE: '<span class="badge badge-green">IDLE</span>',
+                REQUESTING: '<span class="badge badge-blue">ACTIVE</span>',
+                WAITING: '<span class="badge badge-yellow">WAITING</span>',
+                ERROR: '<span class="badge badge-red">ERROR</span>',
+            };
+            return m[status] || `<span class="badge">${status}</span>`;
+        }
+
+        function statusClass(status) {
+            const m = {
+                SUCCESS: 'badge-green',
+                FAILED: 'badge-red',
+                ABORTED: 'badge-red',
+                LOCKED: 'badge-yellow',
+            };
+            return m[status] || 'badge-blue';
+        }
+    </script>
+</body>
+
+</html>
