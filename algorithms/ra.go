@@ -11,7 +11,7 @@ import (
 type RicartAgrawala struct {
 	ID          int
 	Nodes       map[int]string
-	Clock       int
+	Clock       *LamportClock
 	Requesting  bool
 	Replies     int
 	Deferred    []int
@@ -22,14 +22,16 @@ type RicartAgrawala struct {
 }
 
 func (ra *RicartAgrawala) RequestCS() {
+	ra.Clock.Tick()
 	ra.mu.Lock()
-	ra.Clock++
 	ra.Requesting = true
 	ra.Replies = 0
-	timestamp := ra.Clock
+	timestamp := ra.Clock.Time
 	ra.mu.Unlock()
 
+	log.Printf("[Client %d] Lamport Clock Tick -> %d", ra.ID, timestamp)
 	log.Printf("[Client %d] Requesting CS (RA) with timestamp %d", ra.ID, timestamp)
+	log.Printf("[Client %d] Sending REQUEST with timestamp %d", ra.ID, timestamp)
 
 	var wg sync.WaitGroup
 	for id, addr := range ra.Nodes {
@@ -99,12 +101,16 @@ func (ra *RicartAgrawala) HandleRequest(req models.RicartRequest, reply *models.
 	ra.mu.Lock()
 	defer ra.mu.Unlock()
 
-	if ra.Clock < req.Timestamp {
-		ra.Clock = req.Timestamp
-	}
-	ra.Clock++
+	newClock := ra.Clock.ReceiveEvent(req.Timestamp)
+	log.Printf("[Client %d] Received REQUEST timestamp %d -> Clock updated to %d", ra.ID, req.Timestamp, newClock)
 
-	if ra.InCS || (ra.Requesting && (req.Timestamp > ra.Clock || (req.Timestamp == ra.Clock && req.NodeID > ra.ID))) {
+	// In RA, the condition for deferring is:
+	// If I am in CS or if I am requesting and my timestamp is lower (or my ID is lower if timestamps are equal)
+	// Note: We use the timestamp from when we requested, not the current clock.
+	// But RA logic needs a way to compare the request's timestamp with OUR request's timestamp.
+	// ra.Clock.Time at this point is the updated clock.
+
+	if ra.InCS || (ra.Requesting && (req.Timestamp > ra.Clock.Time || (req.Timestamp == ra.Clock.Time && req.NodeID > ra.ID))) {
 		ra.Deferred = append(ra.Deferred, req.NodeID)
 		return true // Defer
 	}

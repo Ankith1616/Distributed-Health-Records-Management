@@ -43,9 +43,12 @@ func main() {
 		1: "10.38.21.68:9001",
 	}
 
+	lc := &algorithms.LamportClock{Time: 0}
+
 	ra := &algorithms.RicartAgrawala{
 		ID:          clientID,
 		Nodes:       clientNodes,
+		Clock:       lc,
 		ServiceName: "ClientRA",
 	}
 
